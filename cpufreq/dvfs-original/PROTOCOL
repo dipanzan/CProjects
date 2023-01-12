@@ -1,0 +1,97 @@
+Systematic approach for performance evaluation
+----------------------------------------------
+
+
+1: State goals and define the system
+------------------------------------
+Comparison between a Signal processing and a deep learning approach for the detection and classification of real life sound.
+Sound are recorded in different scenes and condition. Dataset provided by international and european organisation.
+See Bird Audio Detection (BAD) challenge and DCASE challenge.
+
+
+2: List services and outcomes
+-----------------------------
+- Advance the state of the art in sound detection and classification
+- Many scientific usage: 
+	- Help with very long records used for bio-scientific
+	- Security (Detection car, broken glass, gun shot)
+	- Monitoring wildlife activity
+	- Monitoring city activity (Car, honk, bike, etc ...)
+
+
+3: Select metrics
+-----------------
+Manly a comparison of two methods => How to compare them.
+- Efficiency a.k.a accuracy of the solution.
+	- For classification this implied the following metrics: Overall accuracy and recall (see definition)
+- for deep learning: Training time, inference time
+- for signal processing: Result time (how long it takes to have the result)
+
+
+4: List parameters:
+-------------------
+- signal processing
+	- Feature used
+	- Sampling rate
+	- quantification (number of bits)
+	- sample lenght
+	- number of channel
+
+- Deep learning
+	- Architecture used (CNN, resNet, denseNet)
+	- Hardware
+	- Backend (Library used: Tensorflow, torch, etc...)
+	-
+
+- Common:
+	- Operating system
+	- Driver version (for matarial acceleration)
+	- Cuda version
+	- Hardware (CPU, RAM, VRAM, SSD, HDD, etc..., PCIe version and line number ?)
+
+	- sample lenght
+	- number of sample (require for learning time and comparison time)
+	- number of label ? (surpervised learning)
+	- data augmentation technics
+
+
+5: Select factors to study
+--------------------------
+What can change
+	- Feature used
+	- Data augmentation technics
+	- Architecture (deep learning)
+	- Library
+	- 
+
+
+6: Select evaluation technique
+------------------------------
+Experiment using real life sound sample provided by international or european entities (DCASE and BAD challenge for example)
+
+
+7: Select workload
+------------------
+Set of script or program that will perform the experiment. It is necessary to do some pre and post production.
+
+
+8: Design experiments
+---------------------
+Still in going
+
+
+9: Analyze and interpret data
+-----------------------------
+- Signal processing
+	- Analysis efficiency and comparison between the feature used
+	- Comparison of usage or not of data augmentation
+
+- Deep learning
+	- Analysis of the effect of the architecture used
+	- Usage or not of data augmentation
+
+- Analysis of the effect of the feature extracted as a pre-treatment for deep learning
+
+
+10: Present result
+------------------

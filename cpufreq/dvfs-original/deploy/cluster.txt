@@ -1,0 +1,2 @@
+nova-10.lyon.grid5000.fr
+nova-11.lyon.grid5000.fr

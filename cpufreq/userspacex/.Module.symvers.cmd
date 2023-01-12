@@ -1,0 +1,1 @@
+cmd_/home/dipanzan/CProjects/cpufreq/userspacex/Module.symvers := sed 's/\.ko$$/\.o/' /home/dipanzan/CProjects/cpufreq/userspacex/modules.order | scripts/mod/modpost -m -a  -o /home/dipanzan/CProjects/cpufreq/userspacex/Module.symvers -e -i Module.symvers   -T -
