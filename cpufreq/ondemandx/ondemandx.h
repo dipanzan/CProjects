@@ -6,14 +6,34 @@
  * Author: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
  */
 
+#ifndef _ONDEMANDX_H
+#define _ONDEMANDX_H
+
+#include <linux/ioctl.h>
+#include <linux/uaccess.h>
+
 #include "cpufreq_governor.h"
 
-struct od_policy_dbs_info {
+static ssize_t etx_read(struct file *file, char __user *buf, size_t len, loff_t *off);
+static ssize_t etx_write(struct file *file, const char *buf, size_t len, loff_t *off);
+static int etx_open(struct inode *inode, struct file *file);
+static int etx_release(struct inode *inode, struct file *file);
+static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+
+#define ONDEMANDX "ondemandx"
+#define IOCTL "[IOCTL]"
+
+// #define "ioctl name" __IOX("magic number","command number","argument type")
+#define WR_VALUE _IOW('a', 'a', int *)
+#define RD_VALUE _IOR('a', 'b', int *)
+
+struct od_policy_dbs_info
+{
 	struct policy_dbs_info policy_dbs;
 	unsigned int freq_lo;
 	unsigned int freq_lo_delay_us;
 	unsigned int freq_hi_delay_us;
-	unsigned int sample_type:1;
+	unsigned int sample_type : 1;
 };
 
 static inline struct od_policy_dbs_info *to_dbs_info(struct policy_dbs_info *policy_dbs)
@@ -21,7 +41,8 @@ static inline struct od_policy_dbs_info *to_dbs_info(struct policy_dbs_info *pol
 	return container_of(policy_dbs, struct od_policy_dbs_info, policy_dbs);
 }
 
-struct od_dbs_tuners {
+struct od_dbs_tuners
+{
 	unsigned int powersave_bias;
 };
 
@@ -40,8 +61,8 @@ static void print_freq_table(struct cpufreq_policy *policy)
 		{
 			unsigned int n_frequencies = 0;
 			while (freq_table[n_frequencies].frequency != CPUFREQ_TABLE_END)
-			printk(KERN_INFO "freq_table[%d] = %dKHz", 
-				n_frequencies, freq_table[n_frequencies].frequency);
+				printk(KERN_INFO "freq_table[%d] = %dKHz",
+					   n_frequencies, freq_table[n_frequencies].frequency);
 			n_frequencies++;
 		}
 		print_once = 1;
@@ -56,3 +77,5 @@ static void print_freq_min_max(struct cpufreq_policy *policy)
 
 	printk(KERN_INFO "min_f: %d, max_f: %d", min_f, max_f);
 }
+
+#endif /* _ONDEMANDX_H */

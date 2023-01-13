@@ -8,7 +8,9 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <linux/cdev.h>
 #include <linux/cpu.h>
+#include <linux/fs.h>
 #include <linux/module.h>
 #include <linux/percpu-defs.h>
 #include <linux/slab.h>
@@ -16,8 +18,6 @@
 #include <linux/sched/cpufreq.h>
 
 #include "ondemandx.h"
-
-#define ONDEMANDX "ondemandx"
 
 /* On-demand governor macros */
 #define DEF_FREQUENCY_UP_THRESHOLD (80)
@@ -28,9 +28,125 @@
 #define MIN_FREQUENCY_UP_THRESHOLD (1)
 #define MAX_FREQUENCY_UP_THRESHOLD (100)
 
+static int32_t value;
+dev_t dev = 0;
+static struct class *dev_class;
+static struct cdev etx_cdev;
+
 static struct od_ops od_ops;
 
 static unsigned int default_powersave_bias;
+
+static ssize_t etx_read(struct file *file, char __user *buf, size_t len, loff_t *off)
+{
+	pr_info("%s %s: read()", IOCTL, __func__);
+	return 0;
+}
+
+static ssize_t etx_write(struct file *file, const char *buf, size_t len, loff_t *off)
+{
+	pr_info("%s %s: write()", IOCTL, __func__);
+	return len;
+}
+
+static int etx_open(struct inode *inode, struct file *file)
+{
+	pr_info("%s %s: open()", IOCTL, __func__);
+	return 0;
+}
+
+static int etx_release(struct inode *inode, struct file *file)
+{
+	pr_info("%s %s: release()", IOCTL, __func__);
+	return 0;
+}
+
+static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+	pr_info("%s %s: ioctl()", IOCTL, __func__);
+
+	switch (cmd)
+	{
+	case WR_VALUE:
+		if (copy_from_user(&value, (int32_t *)arg, sizeof(value)))
+		{
+			pr_err("Data Write : Err!\n");
+		}
+		pr_info("CPU detected from userspace: %d\n", value);
+		break;
+	case RD_VALUE:
+		if (copy_to_user((int32_t *)arg, &value, sizeof(value)))
+		{
+			pr_err("Data Read : Err!\n");
+		}
+		break;
+	default:
+		pr_info("Default\n");
+		break;
+	}
+	return 0;
+}
+
+static struct file_operations fops = {
+	.owner = THIS_MODULE,
+	.read = etx_read,
+	.write = etx_write,
+	.open = etx_open,
+	.unlocked_ioctl = etx_ioctl,
+	.release = etx_release,
+};
+
+static int ioctl_init(void)
+{
+	/*Allocating Major number*/
+	if ((alloc_chrdev_region(&dev, 0, 1, "etx_Dev")) < 0)
+	{
+		pr_err("Cannot allocate major number\n");
+		return -1;
+	}
+	pr_info("Major = %d Minor = %d \n", MAJOR(dev), MINOR(dev));
+
+	/*Creating cdev structure*/
+	cdev_init(&etx_cdev, &fops);
+
+	/*Adding character device to the system*/
+	if ((cdev_add(&etx_cdev, dev, 1)) < 0)
+	{
+		pr_err("Cannot add the device to the system\n");
+		goto r_class;
+	}
+
+	/*Creating struct class*/
+	if (IS_ERR(dev_class = class_create(THIS_MODULE, "etx_class")))
+	{
+		pr_err("Cannot create the struct class\n");
+		goto r_class;
+	}
+
+	/*Creating device*/
+	if (IS_ERR(device_create(dev_class, NULL, dev, NULL, "etx_device")))
+	{
+		pr_err("Cannot create the Device 1\n");
+		goto r_device;
+	}
+	pr_info("Device Driver Insert...Done!!!\n");
+	return 0;
+
+r_device:
+	class_destroy(dev_class);
+r_class:
+	unregister_chrdev_region(dev, 1);
+	return -1;
+}
+
+static void ioctl_destroy(void)
+{
+	device_destroy(dev_class, dev);
+	class_destroy(dev_class);
+	cdev_del(&etx_cdev);
+	unregister_chrdev_region(dev, 1);
+	pr_info("Device Driver Remove...Done!\n");
+}
 
 /*
  * Not all CPUs want IO time to be accounted as busy; this depends on how
@@ -169,7 +285,7 @@ static void od_update(struct cpufreq_policy *policy)
 		{
 			freq_next = od_ops.powersave_bias_target(policy, freq_next, CPUFREQ_RELATION_L);
 		}
-		printk(KERN_ALERT "%s: cpu: %u freq_next: %u KHz", __func__, policy->cpu, freq_next);
+		// printk(KERN_ALERT "%s: cpu: %u freq_next: %u KHz", __func__, policy->cpu, freq_next);
 		__cpufreq_driver_target(policy, freq_next, CPUFREQ_RELATION_C);
 	}
 }
@@ -189,8 +305,7 @@ static unsigned int od_dbs_update(struct cpufreq_policy *policy)
 	 */
 	if (sample_type == OD_SUB_SAMPLE && policy_dbs->sample_delay_ns > 0)
 	{
-		__cpufreq_driver_target(policy, dbs_info->freq_lo,
-								CPUFREQ_RELATION_H);
+		__cpufreq_driver_target(policy, dbs_info->freq_lo, CPUFREQ_RELATION_H);
 		return dbs_info->freq_lo_delay_us;
 	}
 
@@ -202,7 +317,6 @@ static unsigned int od_dbs_update(struct cpufreq_policy *policy)
 		dbs_info->sample_type = OD_SUB_SAMPLE;
 		return dbs_info->freq_hi_delay_us;
 	}
-
 	return dbs_data->sampling_rate * policy_dbs->rate_mult;
 }
 
@@ -475,7 +589,7 @@ static struct od_ops od_ops = {
 	.powersave_bias_target = generic_powersave_bias_target,
 };
 
-static int __init cpufreq_ondemandx_dbs_init(void)
+static int register_ondemandx_governor(void)
 {
 	unsigned int n_cpu, i;
 	n_cpu = 0;
@@ -483,21 +597,41 @@ static int __init cpufreq_ondemandx_dbs_init(void)
 	{
 		n_cpu++;
 	}
-	printk(KERN_INFO "%s governor __init - online CPUs : %u", ONDEMANDX, n_cpu);
-	printk(KERN_INFO "%s governor INSTALLED successfully!\n", ONDEMANDX);
+	pr_info("%s governor __init - online CPUs : %u", ONDEMANDX, n_cpu);
 
-	return cpufreq_register_governor(&CPU_FREQ_GOV_ONDEMANDX);
+	int ret = cpufreq_register_governor(&CPU_FREQ_GOV_ONDEMANDX);
+	if (ret == 0)
+	{
+		pr_info("%s governor INSTALLED successfully!\n", ONDEMANDX);
+	}
+	else
+	{
+		pr_alert("%s govneror FAILED to install!\n", ONDEMANDX);
+	}
+	return ret;
+}
+
+static void unregister_ondemandx_governor(void)
+{
+	cpufreq_unregister_governor(&CPU_FREQ_GOV_ONDEMANDX);
+	pr_info("%s governor UNINSTALLED successfully!\n", ONDEMANDX);
+}
+
+static int __init cpufreq_ondemandx_dbs_init(void)
+{
+	ioctl_init();
+	return register_ondemandx_governor();
 }
 
 static void __exit cpufreq_ondemandx_dbs_exit(void)
 {
-	printk(KERN_INFO "%s governor UNINSTALLED successfully!\n", ONDEMANDX);
-	cpufreq_unregister_governor(&CPU_FREQ_GOV_ONDEMANDX);
+	ioctl_destroy();
+	unregister_ondemandx_governor();
 }
 
 MODULE_AUTHOR("Dipanzan Islam <dipanzan@live.com>");
 MODULE_DESCRIPTION("'cpufreq_ondemandx' - A dynamic cpufreq governor for "
-				   "Low Latency Frequency Transition capable processors");
+				   "direct manipulation from userspace applications");
 MODULE_LICENSE("GPL");
 
 module_init(cpufreq_ondemandx_dbs_init);

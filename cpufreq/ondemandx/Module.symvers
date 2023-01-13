@@ -1,0 +1,2 @@
+0xcf46fc68	odx_register_powersave_bias_handler	/home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx	EXPORT_SYMBOL_GPL	
+0x5ad21d62	odx_unregister_powersave_bias_handler	/home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx	EXPORT_SYMBOL_GPL	

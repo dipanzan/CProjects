@@ -1,30 +1,27 @@
-#include <errno.h>
-#include <pthread.h>
-#include <sched.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/syscall.h>
+#include "lock.h"
 
-static void set_max_speed_for_cpu();
-static void reset_all_cpus();
-static void set_pid_to_env();
-static unsigned long get_random_number(unsigned long min, unsigned long max);
-static void *critical_section(void *data);
-static int get_running_cpu();
-static void allocate_primes();
-static void deallocate_primes();
-static void stress_primes(unsigned long n);
-static void print_primes();
+#define WR_VALUE _IOW('a', 'a', int *)
+#define RD_VALUE _IOR('a', 'b', int *)
 
-typedef struct _pr
+static void send_cpu_to_kernel_module(int cpu)
 {
-    unsigned long r1;
-    unsigned long r2;
-} pr;
+    int fd;
+
+    fd = open("/dev/etx_device", O_RDWR);
+    if (fd < 0)
+    {
+        printf("Cannot open device file...\n");
+        exit(-1);
+    }
+    ioctl(fd, WR_VALUE, (int32_t*) &cpu);
+
+    // printf("Reading Value from Driver\n");
+    // ioctl(fd, RD_VALUE, (int32_t*) &value);
+    // printf("Value is %d\n", value);
+
+    printf("Closing Driver\n");
+    close(fd);
+}
 
 pthread_mutex_t rs_mutex = PTHREAD_MUTEX_INITIALIZER;
 unsigned long *primes;
@@ -124,17 +121,17 @@ static void *critical_section(void *data)
 
     int cpu = get_running_cpu();
 
-    set_max_speed_for_cpu(cpu);
-    printf("HELLO\n");
+    send_cpu_to_kernel_module(cpu);
+    // set_max_speed_for_cpu(cpu);
 
     pthread_mutex_lock(&rs_mutex);
     allocate_primes(r1);
     stress_primes(r1);
-    print_primes(r1);
+    // print_primes(r1);
     deallocate_primes();
     pthread_mutex_unlock(&rs_mutex);
 
-    reset_all_cpus();
+    // reset_all_cpus();
 }
 
 static void set_pid_to_env()

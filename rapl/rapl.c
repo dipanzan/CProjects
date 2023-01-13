@@ -226,9 +226,9 @@ char rapl_domain_names[NUM_RAPL_DOMAINS][30] = {
 	"energy-pkg",
 };
 
-static int check_paranoid(void)
+static int check_paranoid()
 {
-	int paranoid_value;
+	int paranoid;
 	FILE *f = fopen("/proc/sys/kernel/perf_event_paranoid", "r");
 	if (!f)
 	{
@@ -236,10 +236,10 @@ static int check_paranoid(void)
 		// return non-negative paranoid value, since negative means no paranoia
 		return 404;
 	}
-	fscanf(f, "%d", &paranoid_value);
+	fscanf(f, "%d", &paranoid);
 	fclose(f);
 
-	return paranoid_value;
+	return paranoid;
 }
 
 static int get_perf_event_rapl_type()
