@@ -28,7 +28,10 @@
 #define MIN_FREQUENCY_UP_THRESHOLD (1)
 #define MAX_FREQUENCY_UP_THRESHOLD (100)
 
-static int32_t value;
+#define CPU_MAX_FREQUENCY 4463000
+#define CPU_MIN_FREQUENCY 400000
+
+static int32_t cpu_from_userspace;
 dev_t dev = 0;
 static struct class *dev_class;
 static struct cdev etx_cdev;
@@ -37,45 +40,45 @@ static struct od_ops od_ops;
 
 static unsigned int default_powersave_bias;
 
-static ssize_t etx_read(struct file *file, char __user *buf, size_t len, loff_t *off)
+static ssize_t device_read(struct file *file, char __user *buf, size_t len, loff_t *off)
 {
 	pr_info("%s %s: read()", IOCTL, __func__);
 	return 0;
 }
 
-static ssize_t etx_write(struct file *file, const char *buf, size_t len, loff_t *off)
+static ssize_t device_write(struct file *file, const char *buf, size_t len, loff_t *off)
 {
 	pr_info("%s %s: write()", IOCTL, __func__);
 	return len;
 }
 
-static int etx_open(struct inode *inode, struct file *file)
+static int device_open(struct inode *inode, struct file *file)
 {
 	pr_info("%s %s: open()", IOCTL, __func__);
 	return 0;
 }
 
-static int etx_release(struct inode *inode, struct file *file)
+static int device_release(struct inode *inode, struct file *file)
 {
 	pr_info("%s %s: release()", IOCTL, __func__);
 	return 0;
 }
 
-static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+static long device_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	pr_info("%s %s: ioctl()", IOCTL, __func__);
 
 	switch (cmd)
 	{
 	case WR_VALUE:
-		if (copy_from_user(&value, (int32_t *)arg, sizeof(value)))
+		if (copy_from_user(&cpu_from_userspace, (int32_t *)arg, sizeof(cpu_from_userspace)))
 		{
 			pr_err("Data Write : Err!\n");
 		}
-		pr_info("CPU detected from userspace: %d\n", value);
+		pr_info("CPU detected from userspace: %d\n", cpu_from_userspace);
 		break;
 	case RD_VALUE:
-		if (copy_to_user((int32_t *)arg, &value, sizeof(value)))
+		if (copy_to_user((int32_t *)arg, &cpu_from_userspace, sizeof(cpu_from_userspace)))
 		{
 			pr_err("Data Read : Err!\n");
 		}
@@ -89,11 +92,11 @@ static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static struct file_operations fops = {
 	.owner = THIS_MODULE,
-	.read = etx_read,
-	.write = etx_write,
-	.open = etx_open,
-	.unlocked_ioctl = etx_ioctl,
-	.release = etx_release,
+	.read = device_read,
+	.write = device_write,
+	.open = device_open,
+	.unlocked_ioctl = device_ioctl,
+	.release = device_release,
 };
 
 static int ioctl_init(void)
@@ -129,7 +132,7 @@ static int ioctl_init(void)
 		pr_err("Cannot create the Device 1\n");
 		goto r_device;
 	}
-	pr_info("Device Driver Insert...Done!!!\n");
+	pr_info("device char driver initialized\n");
 	return 0;
 
 r_device:
@@ -179,6 +182,7 @@ static int should_io_be_busy(void)
 static unsigned int generic_powersave_bias_target(struct cpufreq_policy *policy,
 												  unsigned int freq_next, unsigned int relation)
 {
+	pr_info("%s", __func__);
 	unsigned int freq_req, freq_reduc, freq_avg;
 	unsigned int freq_hi, freq_lo;
 	unsigned int index;
@@ -241,32 +245,35 @@ static void dbs_freq_increase(struct cpufreq_policy *policy, unsigned int freq)
 	else if (policy->cur == policy->max)
 		return;
 
-	// printk(KERN_ALERT "%s: freq: %u", __func__, freq);
+	printk(KERN_ALERT "%s: CPU%u freq: %u", __func__, policy->cpu, freq);
 	__cpufreq_driver_target(policy, freq, od_tuners->powersave_bias ? CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
 }
 
 /*
  * Every sampling_rate, we check, if current idle time is less than 20%
  * (default), then we try to increase frequency. Else, we adjust the frequency
- * proportional to load.
+ * proportional to cpu_load.
  */
 static void od_update(struct cpufreq_policy *policy)
 {
+	// pr_info("%s", __func__);
 	struct policy_dbs_info *policy_dbs = policy->governor_data;
 	struct od_policy_dbs_info *dbs_info = to_dbs_info(policy_dbs);
 	struct dbs_data *dbs_data = policy_dbs->dbs_data;
 	struct od_dbs_tuners *od_tuners = dbs_data->tuners;
 
-	unsigned int load = dbs_update(policy);
+	unsigned int cpu_load = dbs_update(policy);
 
 	dbs_info->freq_lo = 0;
 
 	/* Check for frequency increase */
-	if (load > dbs_data->up_threshold)
+	if (cpu_load > dbs_data->up_threshold)
 	{
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
+		{
 			policy_dbs->rate_mult = dbs_data->sampling_down_factor;
+		}
 		dbs_freq_increase(policy, policy->max);
 	}
 	else
@@ -276,7 +283,7 @@ static void od_update(struct cpufreq_policy *policy)
 
 		min_f = policy->cpuinfo.min_freq;
 		max_f = policy->cpuinfo.max_freq;
-		freq_next = min_f + load * (max_f - min_f) / 100;
+		freq_next = min_f + cpu_load * (max_f - min_f) / 100;
 
 		/* No longer fully busy, reset rate_mult */
 		policy_dbs->rate_mult = 1;
@@ -292,6 +299,7 @@ static void od_update(struct cpufreq_policy *policy)
 
 static unsigned int od_dbs_update(struct cpufreq_policy *policy)
 {
+	// pr_info("%s", __func__);
 	struct policy_dbs_info *policy_dbs = policy->governor_data;
 	struct dbs_data *dbs_data = policy_dbs->dbs_data;
 	struct od_policy_dbs_info *dbs_info = to_dbs_info(policy_dbs);
@@ -473,11 +481,13 @@ static struct policy_dbs_info *od_alloc(void)
 
 static void od_free(struct policy_dbs_info *policy_dbs)
 {
+	// pr_info("%s", __func__);
 	kfree(to_dbs_info(policy_dbs));
 }
 
 static int od_init(struct dbs_data *dbs_data)
 {
+	// pr_info("%s", __func__);
 	struct od_dbs_tuners *tuners;
 	u64 idle_time;
 	int cpu;
@@ -503,13 +513,14 @@ static int od_init(struct dbs_data *dbs_data)
 	dbs_data->ignore_nice_load = 0;
 	tuners->powersave_bias = default_powersave_bias;
 	dbs_data->io_is_busy = should_io_be_busy();
-
 	dbs_data->tuners = tuners;
+
 	return 0;
 }
 
 static void od_exit(struct dbs_data *dbs_data)
 {
+	// pr_info("%s", __func__);
 	kfree(dbs_data->tuners);
 }
 
@@ -536,6 +547,7 @@ static struct dbs_governor od_dbs_gov = {
 
 static void od_set_powersave_bias(unsigned int powersave_bias)
 {
+	// pr_info("%s", __func__);
 	unsigned int cpu;
 	cpumask_t done;
 
@@ -570,9 +582,11 @@ static void od_set_powersave_bias(unsigned int powersave_bias)
 	cpus_read_unlock();
 }
 
-void odx_register_powersave_bias_handler(unsigned int (*f)(struct cpufreq_policy *, unsigned int, unsigned int),
-										 unsigned int powersave_bias)
+void odx_register_powersave_bias_handler( unsigned int (*f)(struct cpufreq_policy *, 
+										unsigned int, unsigned int),
+										unsigned int powersave_bias)
 {
+	// pr_info("%s", __func__);
 	od_ops.powersave_bias_target = f;
 	od_set_powersave_bias(powersave_bias);
 }
@@ -580,6 +594,7 @@ EXPORT_SYMBOL_GPL(odx_register_powersave_bias_handler);
 
 void odx_unregister_powersave_bias_handler(void)
 {
+	// pr_info("%s", __func__);
 	od_ops.powersave_bias_target = generic_powersave_bias_target;
 	od_set_powersave_bias(0);
 }
@@ -600,14 +615,7 @@ static int register_ondemandx_governor(void)
 	pr_info("%s governor __init - online CPUs : %u", ONDEMANDX, n_cpu);
 
 	int ret = cpufreq_register_governor(&CPU_FREQ_GOV_ONDEMANDX);
-	if (ret == 0)
-	{
-		pr_info("%s governor INSTALLED successfully!\n", ONDEMANDX);
-	}
-	else
-	{
-		pr_alert("%s govneror FAILED to install!\n", ONDEMANDX);
-	}
+	ret == 0 ? pr_info("%s governor INSTALLED successfully!\n", ONDEMANDX) : pr_alert("%s govneror FAILED to install!\n", ONDEMANDX);
 	return ret;
 }
 

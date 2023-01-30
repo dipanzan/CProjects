@@ -10,16 +10,16 @@ static void send_cpu_to_kernel_module(int cpu)
     fd = open("/dev/etx_device", O_RDWR);
     if (fd < 0)
     {
-        printf("Cannot open device file...\n");
+        printf("cannot open device file\n");
         exit(-1);
     }
-    ioctl(fd, WR_VALUE, (int32_t*) &cpu);
+    ioctl(fd, WR_VALUE, (int32_t *)&cpu);
 
     // printf("Reading Value from Driver\n");
     // ioctl(fd, RD_VALUE, (int32_t*) &value);
     // printf("Value is %d\n", value);
 
-    printf("Closing Driver\n");
+    printf("closing driver\n");
     close(fd);
 }
 
@@ -88,11 +88,14 @@ static void deallocate_primes()
 
 static void stress_primes(unsigned long n)
 {
-    for (unsigned long i = 0, p = 2; i < n; i++, p++)
+    while (1)
     {
-        if (p % 2 == 0)
+        for (unsigned long i = 0, p = 2; i < n; i++, p++)
         {
-            primes[i] = p;
+            if (p % 2 == 0)
+            {
+                primes[i] = p;
+            }
         }
     }
 }
@@ -120,14 +123,13 @@ static void *critical_section(void *data)
     printf("[%d] primes: %ld\n", tid, r1);
 
     int cpu = get_running_cpu();
-
-    send_cpu_to_kernel_module(cpu);
+    // send_cpu_to_kernel_module(cpu);
     // set_max_speed_for_cpu(cpu);
 
     pthread_mutex_lock(&rs_mutex);
     allocate_primes(r1);
     stress_primes(r1);
-    // print_primes(r1);
+    print_primes(r1);
     deallocate_primes();
     pthread_mutex_unlock(&rs_mutex);
 
@@ -152,10 +154,12 @@ int main(int argc, char *argv[])
     // pid_t tid = syscall(__NR_gettid);
     // printf("[%d] main() sleeping for 1s\n", tid);
 
+    int pid = getpid();
+    printf("PID: %d\n", pid);
     srand(time(NULL));
 
-    unsigned long r1 = get_random_number(1000, 1000);
-    unsigned long r2 = get_random_number(10, 10);
+    unsigned long r1 = get_random_number(1000000, 1000000);
+    unsigned long r2 = get_random_number(1000000, 1000000);
 
     pr ranges = {r1, r2};
 
@@ -165,10 +169,10 @@ int main(int argc, char *argv[])
     pthread_mutex_init(&rs_mutex, NULL);
 
     rc1 = pthread_create(&thread1, NULL, &critical_section, (void *)&ranges);
-    // rc2 = pthread_create(&thread2, NULL, &critical_section, (void *)&ranges);
+    rc2 = pthread_create(&thread2, NULL, &critical_section, (void *)&ranges);
 
     pthread_join(thread1, NULL);
-    // pthread_join(thread2, NULL);
+    pthread_join(thread2, NULL);
 
     pthread_mutex_destroy(&rs_mutex);
 

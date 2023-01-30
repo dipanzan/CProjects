@@ -2,7 +2,8 @@ GOVERNOR_ONDEMANDX := ondemandx
 GOVERNOR_DEFAULT := ondemand
 SHELL := /bin/bash
 KVER := $(shell uname -r)
-KDIR ?= /lib/modules/$(KVER)/build
+KVER_COMPILED_AGAINST := 5.15.0-57-generic
+KDIR ?= /lib/modules/$(KVER_COMPILED_AGAINST)/build
 PWD := $(shell pwd)
 NBPROC ?= $(shell cat /proc/cpuinfo | grep processor | wc -l)
 CFLAGS := -gw
@@ -12,7 +13,6 @@ build:
 	$(MAKE) -C $(CLFAGS) $(KDIR) M=$(PWD)
 
 clean:
-	echo $(KDIR)
 	# clean root directory
 	rm -Rf ./.tmp_versions
 	rm -f ./*.o
@@ -34,6 +34,9 @@ install:
 remove:
 	sudo rmmod $(GOVERNOR_ONDEMANDX)
 
+clear:
+	sudo dmesg --clear
+
 log:
 	sudo dmesg -w
 
@@ -53,6 +56,7 @@ unset:
 	done
 
 init:
+	$(MAKE) clear
 	$(MAKE) build
 	$(MAKE) install
 	$(MAKE) set

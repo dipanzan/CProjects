@@ -28,6 +28,7 @@ the sysfs powercap interface got into the kernel in
 // cat /sys/bus/event_source/devices/power/events/energy-pkg.scale
 // cat /sys/bus/event_source/devices/power/events/energy-pkg.unit
 
+#include <asm/unistd.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -67,6 +68,20 @@ static int get_perf_event_rapl_config();
 static double get_perf_event_rapl_scale();
 static void get_perf_event_rapl_units(char *);
 
+ssize_t perf_event_open_asm(struct perf_event_attr *hw_event_uptr, pid_t pid, int cpu, int group_fd, unsigned long flags)
+{
+    ssize_t ret;
+    // asm volatile
+    // (
+    //     "syscall"
+    //     : "=a" (ret)
+    //     //                 EDI      RSI       RDX
+    //     : "298"(__NR_perf_event_open), "D"(fd), "S"(buf), "d"(size)
+    //     : "rcx", "r11", "memory"
+    // );
+    return ret;
+}
+
 static void measure_cores(int core)
 {
 	if (core != -1)
@@ -82,6 +97,11 @@ static void measure_cores(int core)
 	}
 }
 
+static void launch_experiment()
+{
+	system("sudo ../lock/lock");
+}
+
 static void sleep_experiment(int time)
 {
 
@@ -89,16 +109,16 @@ static void sleep_experiment(int time)
 	sleep(time);
 }
 
-static void launch_experiment()
-{
-	printf("launching experiment:\n\n");
-	int result = execvp("./lock", NULL);
+// static void launch_experiment()
+// {
+// 	printf("launching experiment:\n\n");
+// 	int result = execvp("./lock", NULL);
 
-	if (result == -1)
-	{
-		printf("couldn't launch experiement\n");
-	}
-}
+// 	if (result == -1)
+// 	{
+// 		printf("couldn't launch experiement\n");
+// 	}
+// }
 
 static int open_msr(int core)
 {
@@ -141,7 +161,7 @@ static long long read_msr(int fd, int which)
 		perror("rdmsr:pread");
 		exit(127);
 	}
-	return (long long)data;
+	return (long long) data;
 }
 
 static void detect_cpu()
@@ -180,6 +200,7 @@ static void reset_package_map()
 		package_map[i] = -1;
 	}
 }
+
 static void detect_packages()
 {
 	reset_package_map();
@@ -232,7 +253,7 @@ static int check_paranoid()
 	FILE *f = fopen("/proc/sys/kernel/perf_event_paranoid", "r");
 	if (!f)
 	{
-		fprintf(stderr, "Error! could not open /proc/sys/kernel/perf_event_paranoid %s\n", strerror(errno));
+		fprintf(stderr, "could not open /proc/sys/kernel/perf_event_paranoid %s\n", strerror(errno));
 		// return non-negative paranoid value, since negative means no paranoia
 		return 404;
 	}
@@ -364,7 +385,7 @@ static void close_fd(int fd[][MAX_PACKAGES], int core)
 			{
 				read(fd[i][j], &value, 8);
 				close(fd[i][j]);
-				printf("[CPU: %d] energy consumed: %lf %s\n", core, (double)value * scale, units);
+				printf("[CPU: %d] energy consumed: %lf %s\n", core, (double) value * scale, units);
 			}
 		}
 	}
@@ -376,129 +397,11 @@ static void rapl_perf(pid_t pid, int core)
 
 	// measure energy consumption
 	open_fd(fd, pid, core);
-	sleep_experiment(1);
+	launch_experiment();
 	close_fd(fd, core);
 }
 
-static int rapl_sysfs(int core)
-{
-	char event_names[MAX_PACKAGES][NUM_RAPL_DOMAINS][256];
-	char filenames[MAX_PACKAGES][NUM_RAPL_DOMAINS][256];
-	char basename[MAX_PACKAGES][256];
-	char tempfile[256];
-	long long before[MAX_PACKAGES][NUM_RAPL_DOMAINS];
-	long long after[MAX_PACKAGES][NUM_RAPL_DOMAINS];
-	int valid[MAX_PACKAGES][NUM_RAPL_DOMAINS];
-	int i, j;
-	FILE *fff;
-
-	printf("\nTrying sysfs powercap interface to gather results\n\n");
-
-	/* /sys/class/powercap/intel-rapl/intel-rapl:0/ */
-	/* name has name */
-	/* energy_uj has energy */
-	/* subdirectories intel-rapl:0:0 intel-rapl:0:1 intel-rapl:0:2 */
-
-	for (j = 0; j < total_packages; j++)
-	{
-		i = 0;
-		sprintf(basename[j], "/sys/class/powercap/intel-rapl/intel-rapl:%d",
-				j);
-		sprintf(tempfile, "%s/name", basename[j]);
-		fff = fopen(tempfile, "r");
-		if (fff == NULL)
-		{
-			fprintf(stderr, "\tCould not open %s\n", tempfile);
-			return -1;
-		}
-		fscanf(fff, "%s", event_names[j][i]);
-		valid[j][i] = 1;
-		fclose(fff);
-		sprintf(filenames[j][i], "%s/energy_uj", basename[j]);
-
-		/* Handle subdomains */
-		for (i = 1; i < NUM_RAPL_DOMAINS; i++)
-		{
-			sprintf(tempfile, "%s/intel-rapl:%d:%d/name",
-					basename[j], j, i - 1);
-			fff = fopen(tempfile, "r");
-			if (fff == NULL)
-			{
-				// fprintf(stderr,"\tCould not open %s\n",tempfile);
-				valid[j][i] = 0;
-				continue;
-			}
-			valid[j][i] = 1;
-			fscanf(fff, "%s", event_names[j][i]);
-			fclose(fff);
-			sprintf(filenames[j][i], "%s/intel-rapl:%d:%d/energy_uj",
-					basename[j], j, i - 1);
-		}
-	}
-
-	/* Gather before values */
-	for (j = 0; j < total_packages; j++)
-	{
-		for (i = 0; i < NUM_RAPL_DOMAINS; i++)
-		{
-			if (valid[j][i])
-			{
-				fff = fopen(filenames[j][i], "r");
-				if (fff == NULL)
-				{
-					fprintf(stderr, "\tError opening %s!\n", filenames[j][i]);
-				}
-				else
-				{
-					fscanf(fff, "%lld", &before[j][i]);
-					fclose(fff);
-				}
-			}
-		}
-	}
-
-	printf("\tSleeping 1 second\n\n");
-	sleep(1);
-
-	/* Gather after values */
-	for (j = 0; j < total_packages; j++)
-	{
-		for (i = 0; i < NUM_RAPL_DOMAINS; i++)
-		{
-			if (valid[j][i])
-			{
-				fff = fopen(filenames[j][i], "r");
-				if (fff == NULL)
-				{
-					fprintf(stderr, "\tError opening %s!\n", filenames[j][i]);
-				}
-				else
-				{
-					fscanf(fff, "%lld", &after[j][i]);
-					fclose(fff);
-				}
-			}
-		}
-	}
-
-	for (j = 0; j < total_packages; j++)
-	{
-		printf("\tPackage %d\n", j);
-		for (i = 0; i < NUM_RAPL_DOMAINS; i++)
-		{
-			if (valid[j][i])
-			{
-				printf("\t\t%s\t: %lfJ\n", event_names[j][i],
-					   ((double)after[j][i] - (double)before[j][i]) / 1000000.0);
-			}
-		}
-	}
-	printf("\n");
-
-	return 0;
-}
-
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
 	detect_cpu();
 	detect_packages();
@@ -510,24 +413,25 @@ int main(int argc, char **argv)
 void measure_energy_consumption(int argc, char *argv[])
 {
 	int c;
-	int core = atoi(argv[2]);
+	int core = atoi(argv[1]);
 
-	while ((c = getopt(argc, argv, "c:hmps")) != -1)
-	{
-		switch (c)
-		{
-		case 'h':
-			printf("Usage: %s [-h] [-s|p] n [core]\n\n", argv[0]);
-			exit(0);
-		case 'p':
-			measure_cores(core);
-			exit(0);
-		case 's':
-			rapl_sysfs(0);
-			exit(0);
-		default:
-			fprintf(stderr, "Unknown option %c\n", c);
-			exit(-1);
-		}
-	}
+	// printf("core: %d\n", core);
+
+	measure_cores(core);
+
+	// while ((c = getopt(argc, argv, "c:hmps")) != -1)
+	// {
+	// 	switch (c)
+	// 	{
+	// 	case 'h':
+	// 		printf("Usage: %s [-h] [p] n [core]\n\n", argv[0]);
+	// 		exit(0);
+	// 	case 'p':
+	// 		measure_cores(core);
+	// 		exit(0);
+	// 	default:
+	// 		fprintf(stderr, "Unknown option %c\n", c);
+	// 		exit(-1);
+	// 	}
+	// }
 }

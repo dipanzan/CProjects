@@ -14,11 +14,11 @@
 
 #include "cpufreq_governor.h"
 
-static ssize_t etx_read(struct file *file, char __user *buf, size_t len, loff_t *off);
-static ssize_t etx_write(struct file *file, const char *buf, size_t len, loff_t *off);
-static int etx_open(struct inode *inode, struct file *file);
-static int etx_release(struct inode *inode, struct file *file);
-static long etx_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+static ssize_t device_read(struct file *file, char __user *buf, size_t len, loff_t *off);
+static ssize_t device_write(struct file *file, const char *buf, size_t len, loff_t *off);
+static int device_open(struct inode *inode, struct file *file);
+static int device_release(struct inode *inode, struct file *file);
+static long device_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
 #define ONDEMANDX "ondemandx"
 #define IOCTL "[IOCTL]"

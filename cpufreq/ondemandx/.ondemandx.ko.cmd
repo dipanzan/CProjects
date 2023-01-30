@@ -1,1 +1,0 @@
-cmd_/home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx.ko /home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx.o /home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx.mod.o;  true
