@@ -43,6 +43,7 @@ static void print_task(void)
         char *comm = __process_struct->comm;
         unsigned int on_cpu = __process_struct->on_cpu;
         pr_alert("PROCESS DETECTED: %s on CPU: %d", comm, on_cpu);
+        pr_alert("YAAAY");
     }
 }
 
