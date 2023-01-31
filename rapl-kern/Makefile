@@ -1,10 +1,12 @@
-MODULE_NAME := test
+MODULE_NAME := detect-process
 SHELL := /bin/bash
 KVER := $(shell uname -r)
 KVER_COMPILED_AGAINST := 5.15.0-57-generic
-KDIR ?= /lib/modules/$(KVER_COMPILED_AGAINST)/build
+KDIR ?= /lib/modules/$(KVER)/build
 PWD := $(shell pwd)
 CFLAGS := -gw
+PROC := ""
+PID := 0
 obj-m += $(MODULE_NAME).o
 
 build:
@@ -27,7 +29,7 @@ clean:
 	rm -f ./*.mod
 
 install:
-	sudo insmod $(MODULE_NAME).ko
+	sudo insmod $(MODULE_NAME).ko target_process_name=$(PROC) target_process_pid=$(PID)
 
 remove:
 	sudo rmmod $(MODULE_NAME)
@@ -35,10 +37,10 @@ remove:
 clear:
 	sudo dmesg --clear
 
-init:
-	$(MAKE) build
-	$(MAKE) install
-
 dinit:
 	$(MAKE) remove
 	$(MAKE) clean
+
+init:
+	$(MAKE) build
+	$(MAKE) install target_process_name=$(PROC) target_process_pid=$(PID)
