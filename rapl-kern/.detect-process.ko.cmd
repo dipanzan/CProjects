@@ -1,1 +1,0 @@
-cmd_/home/dipanzan/CProjects/rapl-kern/detect-process.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/dipanzan/CProjects/rapl-kern/detect-process.ko /home/dipanzan/CProjects/rapl-kern/detect-process.o /home/dipanzan/CProjects/rapl-kern/detect-process.mod.o;  true

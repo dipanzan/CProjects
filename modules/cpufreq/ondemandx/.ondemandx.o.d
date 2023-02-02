@@ -1,4 +1,5 @@
-ondemandx.o: /home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx.c \
+ondemandx.o: \
+ /home/dipanzan/CProjects/modules/cpufreq/ondemandx/ondemandx.c \
  include/linux/compiler-version.h include/linux/kconfig.h \
  include/generated/autoconf.h include/linux/compiler_types.h \
  include/linux/compiler_attributes.h include/linux/compiler-gcc.h \
@@ -250,8 +251,8 @@ ondemandx.o: /home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx.c \
  arch/x86/include/asm/clocksource.h \
  arch/x86/include/asm/vdso/clocksource.h include/vdso/clocksource.h \
  include/linux/context_tracking_state.h \
- /home/dipanzan/CProjects/cpufreq/ondemandx/ondemandx.h \
- /home/dipanzan/CProjects/cpufreq/ondemandx/cpufreq_governor.h \
+ /home/dipanzan/CProjects/modules/cpufreq/ondemandx/ondemandx.h \
+ /home/dipanzan/CProjects/modules/cpufreq/ondemandx/cpufreq_governor.h \
  include/linux/irq_work.h arch/x86/include/asm/irq_work.h \
  include/linux/cpufreq.h include/linux/clk.h include/linux/of_device.h \
  include/linux/platform_device.h include/linux/of_platform.h \

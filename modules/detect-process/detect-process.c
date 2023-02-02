@@ -101,7 +101,7 @@ static int __init test_init(void)
 
 static void __exit test_exit(void)
 {
-    pr_info("detect-rprocess uninstalled\n");
+    pr_info("detect-process uninstalled\n");
     
 }
 

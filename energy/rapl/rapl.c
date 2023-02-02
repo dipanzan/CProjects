@@ -346,6 +346,8 @@ static void open_fd(int fd[][MAX_PACKAGES], int pid, int core)
 
 			fd[i][j] = perf_event_open(&attr, pid, core, -1, 0);
 
+			printf("fd = %d\n", fd[i][j]);
+
 			if (fd[i][j] < 0)
 			{
 				if (errno == EACCES)

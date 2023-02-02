@@ -88,14 +88,11 @@ static void deallocate_primes()
 
 static void stress_primes(unsigned long n)
 {
-    while (1)
+    for (unsigned long i = 0, p = 2; i < n; i++, p++)
     {
-        for (unsigned long i = 0, p = 2; i < n; i++, p++)
+        if (p % 2 == 0)
         {
-            if (p % 2 == 0)
-            {
-                primes[i] = p;
-            }
+            primes[i] = p;
         }
     }
 }
@@ -129,7 +126,7 @@ static void *critical_section(void *data)
     pthread_mutex_lock(&rs_mutex);
     allocate_primes(r1);
     stress_primes(r1);
-    print_primes(r1);
+    // print_primes(r1);
     deallocate_primes();
     pthread_mutex_unlock(&rs_mutex);
 
@@ -158,8 +155,8 @@ int main(int argc, char *argv[])
     printf("PID: %d\n", pid);
     srand(time(NULL));
 
-    unsigned long r1 = get_random_number(1000000, 1000000);
-    unsigned long r2 = get_random_number(1000000, 1000000);
+    unsigned long r1 = get_random_number(1000000000, 1000000000);
+    unsigned long r2 = get_random_number(1000000000, 1000000000);
 
     pr ranges = {r1, r2};
 

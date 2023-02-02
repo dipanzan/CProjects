@@ -1,0 +1,1 @@
+cmd_/home/dipanzan/CProjects/modules/energy/Module.symvers := sed 's/\.ko$$/\.o/' /home/dipanzan/CProjects/modules/energy/modules.order | scripts/mod/modpost -m -a  -o /home/dipanzan/CProjects/modules/energy/Module.symvers -e -i Module.symvers   -T -

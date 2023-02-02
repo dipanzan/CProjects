@@ -1,4 +1,4 @@
-# Compile with:   gcc -O2 -Wall -o rapl-read rapl-read.c -lm
+# Compile with:   gcc -O2 -Wall -o rapl rapl.c -lm
 
 CC = gcc
 CFLAGS = -O2 -g -lm
@@ -11,4 +11,4 @@ clean:
 	$(RM) $(TARGET)
 
 perf:
-	sudo ./rapl -p -1
+	sudo ./$(TARGET) -p -1
