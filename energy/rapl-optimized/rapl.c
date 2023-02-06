@@ -85,14 +85,18 @@ static void rapl_perf(pid_t pid, int core)
     int fd = -1;
 
     open_fd(&fd, pid, core);
-    sleep(1);
+    system("../../lock/lock");
     close_fd(&fd, core);
 }
 
 int main(int argc, char *argv[])
 {
     // int core = atoi(argv[1]);
-    rapl_perf(PID_NEGATIVE_ONE, 0);
+    
+    for (int i = 0; i < 4; i++)
+    {
+        rapl_perf(PID_NEGATIVE_ONE, i);
+    }
 
     return 0;
 }

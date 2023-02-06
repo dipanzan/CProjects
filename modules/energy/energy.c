@@ -8,8 +8,6 @@
 #include <linux/string.h>
 #include <linux/sched.h>
 
-
-
 #include <linux/perf_event.h>
 
 #define MAX_CPUS 1024
@@ -43,9 +41,9 @@ static void kln_init(void)
     }
 
     _kallsyms_lookup_name = (kln) kp.addr;
-    sys_call_ptr_t **arr = (sys_call_ptr_t**) _kallsyms_lookup_name(SYS_CALL_TABLE);
+    sys_call_ptr_t **syscall_table = (sys_call_ptr_t**) _kallsyms_lookup_name(SYS_CALL_TABLE);
 
-    arr[__NR_perf_event_open](.)
+    syscall_table[__NR_perf_event_open](.)
 
 
 
