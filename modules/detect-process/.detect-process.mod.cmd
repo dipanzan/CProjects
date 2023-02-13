@@ -1,1 +1,1 @@
-cmd_/home/dipanzan/CProjects/rapl-kern/detect-process.mod := { echo  /home/dipanzan/CProjects/rapl-kern/detect-process.o;  echo; } > /home/dipanzan/CProjects/rapl-kern/detect-process.mod
+cmd_/home/dipanzan/CProjects/modules/detect-process/detect-process.mod := { echo  /home/dipanzan/CProjects/modules/detect-process/detect-process.o;  echo; } > /home/dipanzan/CProjects/modules/detect-process/detect-process.mod

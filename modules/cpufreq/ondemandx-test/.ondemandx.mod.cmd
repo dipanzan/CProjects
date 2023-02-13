@@ -1,0 +1,1 @@
+cmd_/home/dipanzan/CProjects/modules/cpufreq/ondemandx-test/ondemandx.mod := { echo  /home/dipanzan/CProjects/modules/cpufreq/ondemandx-test/ondemandx.o;  echo; } > /home/dipanzan/CProjects/modules/cpufreq/ondemandx-test/ondemandx.mod

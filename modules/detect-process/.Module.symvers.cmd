@@ -1,1 +1,1 @@
-cmd_/home/dipanzan/CProjects/rapl-kern/Module.symvers := sed 's/\.ko$$/\.o/' /home/dipanzan/CProjects/rapl-kern/modules.order | scripts/mod/modpost -m -a  -o /home/dipanzan/CProjects/rapl-kern/Module.symvers -e -i Module.symvers   -T -
+cmd_/home/dipanzan/CProjects/modules/detect-process/Module.symvers := sed 's/\.ko$$/\.o/' /home/dipanzan/CProjects/modules/detect-process/modules.order | scripts/mod/modpost -m -a  -o /home/dipanzan/CProjects/modules/detect-process/Module.symvers -e -i Module.symvers   -T -

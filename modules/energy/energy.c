@@ -30,7 +30,8 @@ typedef unsigned long (*kln)(const char *name);
 kln _kallsyms_lookup_name = NULL;
 
 static struct kprobe kp = {
-    .symbol_name = KALLSYMS_LOOKUP_NAME};
+    .symbol_name = KALLSYMS_LOOKUP_NAME
+};
 
 static void kln_init(void)
 {

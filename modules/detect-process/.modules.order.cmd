@@ -1,1 +1,1 @@
-cmd_/home/dipanzan/CProjects/rapl-kern/modules.order := {   echo /home/dipanzan/CProjects/rapl-kern/detect-process.ko; :; } | awk '!x[$$0]++' - > /home/dipanzan/CProjects/rapl-kern/modules.order
+cmd_/home/dipanzan/CProjects/modules/detect-process/modules.order := {   echo /home/dipanzan/CProjects/modules/detect-process/detect-process.ko; :; } | awk '!x[$$0]++' - > /home/dipanzan/CProjects/modules/detect-process/modules.order
